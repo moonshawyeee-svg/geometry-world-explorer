@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry World Explorer - Pengembaraan Bentuk Geometri</title>
+    <!-- Muat turun Tailwind CSS untuk susun atur responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fon Google mesra kanak-kanak: Fredoka & Nunito -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Gaya Tersuai Tema Kartun Pengembaraan */
+        :root {
+            --sky-top: #38bdf8;
+            --sky-bottom: #bae6fd;
+            --grass-light: #4ade80;
+            --grass-dark: #16a34a;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 70%, #fef08a 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        h1, h2, h3, .font-cartoon {
+            font-family: 'Fredoka', sans-serif;
+            letter-spacing: 0.02em;
+        }
+
+        /* Butang Gaya Kartun 3D Memantul */
+        .btn-cartoon {
+            transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease;
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.22);
+        }
+        .btn-cartoon:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 9px 0 rgba(0, 0, 0, 0.22);
+        }
+        .btn-cartoon:active:not(:disabled) {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22);
+        }
+        .btn-cartoon:disabled {
+            opacity: 0.85;
+            cursor: not-allowed;
+        }
+
+        /* Animasi Awan & Persekitaran */
+        @keyframes floatCloud {
+            0% { transform: translateX(-150px); }
+            100% { transform: translateX(calc(100vw + 150px)); }
+        }
+        .cloud-1 { animation: floatCloud 38s linear infinite; }
+        .cloud-2 { animation: floatCloud 52s linear infinite; animation-delay: -18s; }
+        .cloud-3 { animation: floatCloud 44s linear infinite; animation-delay: -30s; }
+
+        /* Animasi Bentuk Geometri Terapung & Berkelip Mata */
+        @keyframes shapeBob {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+        .animate-shape-bob {
+            animation: shapeBob 3s ease-in-out infinite;
+        }
+
+        @keyframes eyeBlink {
+            0%, 92%, 100% { transform: scaleY(1); }
+            96% { transform: scaleY(0.1); }
+        }
+        .cartoon-eye {
+            transform-origin: center;
+            animation: eyeBlink 4s infinite;
+        }
+
+        /* Animasi Maklum Balas Jawapan */
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            75% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in {
+            animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes shakeWrong {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px) rotate(-2deg); }
+            40% { transform: translateX(10px) rotate(2deg); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shakeWrong 0.45s ease-in-out;
+        }
+
+        @keyframes bounceCelebrate {
+            0%, 100% { transform: translateY(0) scale(1); }
+            40% { transform: translateY(-16px) scale(1.08); }
+            70% { transform: translateY(-6px) scale(1.03); }
+        }
+        .animate-celebrate {
+            animation: bounceCelebrate 0.6s ease;
+        }
+
+        @keyframes pulseHeart {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.18); }
+        }
+        .heart-beat {
+            animation: pulseHeart 1.4s ease-in-out infinite;
+        }
+
+        /* Latar Bukit Kartun di Bahagian Bawah */
+        .hills-bg {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 140px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Kanvas Konfeti */
+        #confettiCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        /* Kad Kaca Kartun */
+        .cartoon-card {
+            background: rgba(255, 255, 255, 0.96);
+            border: 4px solid #ffffff;
+            box-shadow: 0 12px 28px rgba(14, 116, 144, 0.22), 0 6px 0 #cbd5e1;
+        }
+    </style>
+</head>
+<body class="relative flex flex-col items-center justify-between p-3 sm:p-5">
+
+    <!-- Kanvas Konfeti untuk Sambutan Kemenangan -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- Elemen Latar Belakang Kartun: Matahari & Awan Bergerak -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <!-- Matahari Tersenyum -->
+        <svg class="absolute top-4 right-4 sm:top-6 sm:right-10 w-20 h-20 sm:w-28 sm:h-28 animate-spin" style="animation-duration: 45s;" viewBox="0 0 120 120">
+            <g fill="#facc15" stroke="#f59e0b" stroke-width="3">
+                <circle cx="60" cy="60" r="32"/>
+                <polygon points="60,6 67,22 53,22"/>
+                <polygon points="60,114 67,98 53,98"/>
+                <polygon points="6,60 22,53 22,67"/>
+                <polygon points="114,60 98,53 98,67"/>
+                <polygon points="22,22 36,28 28,36"/>
+                <polygon points="98,98 84,92 92,84"/>
+                <polygon points="98,22 92,36 84,28"/>
+                <polygon points="22,98 28,84 36,92"/>
+            </g>
+        </svg>
+
+        <!-- Awan Kartun -->
+        <svg class="cloud-1 absolute top-10 left-0 w-32 sm:w-44 opacity-90" viewBox="0 0 200 100">
+            <path d="M45,80 L155,80 C175,80 188,65 185,48 C182,32 166,24 150,28 C144,12 126,5 108,10 C94,2 72,5 62,20 C44,18 26,30 25,48 C23,66 32,80 45,80 Z" fill="#ffffff"/>
+        </svg>
+        <svg class="cloud-2 absolute top-28 left-0 w-24 sm:w-36 opacity-80" viewBox="0 0 200 100">
+            <path d="M45,80 L155,80 C175,80 188,65 185,48 C182,32 166,24 150,28 C144,12 126,5 108,10 C94,2 72,5 62,20 C44,18 26,30 25,48 C23,66 32,80 45,80 Z" fill="#ffffff"/>
+        </svg>
+        <svg class="cloud-3 absolute top-16 left-0 w-28 sm:w-40 opacity-85" viewBox="0 0 200 100">
+            <path d="M45,80 L155,80 C175,80 188,65 185,48 C182,32 166,24 150,28 C144,12 126,5 108,10 C94,2 72,5 62,20 C44,18 26,30 25,48 C23,66 32,80 45,80 Z" fill="#ffffff"/>
+        </svg>
+    </div>
+
+    <!-- Bukit Rumput Kartun Bawah -->
+    <svg class="hills-bg" viewBox="0 0 1440 200" preserveAspectRatio="none">
+        <path d="M0,90 Q360,10 720,100 T1440,70 L1440,200 L0,200 Z" fill="#22c55e"/>
+        <path d="M0,130 Q480,180 960,110 T1440,140 L1440,200 L0,200 Z" fill="#16a34a"/>
+    </svg>
+
+    <!-- BAR NAVIGASI ATAS -->
+    <header class="relative z-10 w-full max-w-4xl flex items-center justify-between mb-3">
+        <button id="homeBtn" onclick="confirmReturnHome()" class="hidden btn-cartoon bg-amber-400 hover:bg-amber-300 text-amber-950 font-cartoon font-bold px-3.5 py-2 rounded-2xl border-2 border-amber-600 flex items-center gap-1.5 text-sm sm:text-base">
+            <span>🏠</span> <span class="hidden sm:inline">Menu Utama</span>
+        </button>
+        <div id="brandBadge" class="bg-white/90 backdrop-blur px-4 py-1.5 rounded-full border-2 border-sky-400 shadow-sm flex items-center gap-2">
+            <span class="text-xl">🧭</span>
+            <span class="font-cartoon font-bold text-sky-800 text-sm sm:text-base">Geometry World Explorer</span>
+        </div>
+        <button id="soundToggleBtn" onclick="toggleSound()" class="btn-cartoon bg-white hover:bg-sky-50 text-sky-800 font-cartoon font-bold px-3.5 py-2 rounded-2xl border-2 border-sky-300 flex items-center gap-1.5 text-sm sm:text-base" title="Bunyi Hidup/Mati">
+            <span id="soundIcon">🔊</span> <span id="soundLabel" class="hidden sm:inline">Bunyi: Hidup</span>
+        </button>
+    </header>
+
+    <!-- KANDUNGAN UTAMA -->
+    <main class="relative z-10 w-full max-w-4xl flex-1 flex flex-col items-center justify-center my-auto">
+
+        <!-- ==================== 1. SKRIN UTAMA (MENU MULA) ==================== -->
+        <section id="startScreen" class="w-full cartoon-card rounded-3xl p-5 sm:p-8 text-center animate-pop-in">
+            <!-- Maskot Robot Geo & Tajuk -->
+            <div class="flex flex-col items-center mb-4">
+                <div class="w-28 h-28 sm:w-32 sm:h-32 mb-2 animate-shape-bob">
+                    <!-- SVG Maskot Robot Penjelajah Geo -->
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow-md">
+                        <!-- Antena -->
+                        <line x1="80" y1="26" x2="80" y2="10" stroke="#475569" stroke-width="5" stroke-linecap="round"/>
+                        <circle cx="80" cy="10" r="8" fill="#f43f5e"/>
+                        <!-- Topi Penjelajah -->
+                        <ellipse cx="80" cy="34" rx="46" ry="10" fill="#d97706"/>
+                        <path d="M48,34 C48,16 112,16 112,34 Z" fill="#f59e0b"/>
+                        <!-- Kepala Robot -->
+                        <rect x="36" y="36" width="88" height="68" rx="22" fill="#38bdf8" stroke="#0284c7" stroke-width="4"/>
+                        <!-- Skrin Muka -->
+                        <rect x="46" y="46" width="68" height="46" rx="14" fill="#0f172a"/>
+                        <!-- Mata Ceria -->
+                        <g class="cartoon-eye">
+                            <circle cx="65" cy="66" r="8" fill="#38bdf8"/>
+                            <circle cx="67" cy="64" r="3" fill="#ffffff"/>
+                            <circle cx="95" cy="66" r="8" fill="#38bdf8"/>
+                            <circle cx="97" cy="64" r="3" fill="#ffffff"/>
+                        </g>
+                        <!-- Senyuman -->
+                        <path d="M68,79 Q80,89 92,79" fill="none" stroke="#4ade80" stroke-width="4" stroke-linecap="round"/>
+                        <!-- Badan & Lencana Segi Tiga -->
+                        <rect x="48" y="108" width="64" height="38" rx="14" fill="#fbbf24" stroke="#d97706" stroke-width="4"/>
+                        <polygon points="80,115 92,136 68,136" fill="#ec4899" stroke="#ffffff" stroke-width="2"/>
+                        <!-- Tangan Melambai -->
+                        <path d="M36,118 Q16,102 22,84" fill="none" stroke="#0284c7" stroke-width="8" stroke-linecap="round"/>
+                        <circle cx="22" cy="82" r="7" fill="#f43f5e"/>
+                        <path d="M124,118 Q144,128 140,142" fill="none" stroke="#0284c7" stroke-width="8" stroke-linecap="round"/>
+                        <circle cx="140" cy="142" r="7" fill="#f43f5e"/>
+                    </svg>
+                </div>
+
+                <span class="inline-block bg-amber-100 text-amber-800 border-2 border-amber-300 font-bold text-xs sm:text-sm px-3 py-1 rounded-full mb-2">
+                    🚀 Pengembaraan Matematik Interaktif
+                </span>
+                <h1 class="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-indigo-600 to-pink-600 drop-shadow-sm">
+                    Geometry World Explorer
+                </h1>
+                <p class="text-slate-600 font-semibold text-sm sm:text-lg max-w-xl mt-2">
+                    Hai penjelajah muda! Mari kenali bentuk <span class="text-sky-600 font-bold">2D</span> dan <span class="text-pink-600 font-bold">3D</span>, kira sisi, bucu serta permukaan bersama Kapten Geo!
+                </p>
+            </div>
+
+            <!-- Barisan Pratonton Bentuk Kartun Comel -->
+            <div class="flex flex-wrap justify-center gap-3 sm:gap-4 my-4 bg-sky-50/90 p-3 rounded-2xl border-2 border-sky-200" id="previewShapesBar">
+                <!-- Diisi oleh JavaScript -->
+            </div>
+
+            <!-- Pilihan Tahap Kesukaran -->
+            <div class="mt-5">
+                <h2 class="font-cartoon text-lg sm:text-xl font-bold text-slate-700 mb-3">
+                    Pilih Tahap Pengembaraan Kamu:
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <!-- Tahap Mudah -->
+                    <button onclick="startGame('mudah')" class="btn-cartoon bg-gradient-to-b from-emerald-400 to-emerald-500 text-white rounded-2xl p-4 border-2 border-emerald-700 flex flex-col items-center">
+                        <span class="text-3xl mb-1">🌱</span>
+                        <span class="font-cartoon text-xl font-bold">MUDAH</span>
+                        <span class="text-xs bg-emerald-700/40 px-2.5 py-0.5 rounded-full mt-1">Bentuk Asas • 25 Saat</span>
+                    </button>
+
+                    <!-- Tahap Sederhana -->
+                    <button onclick="startGame('sederhana')" class="btn-cartoon bg-gradient-to-b from-amber-400 to-orange-500 text-white rounded-2xl p-4 border-2 border-orange-700 flex flex-col items-center">
+                        <span class="text-3xl mb-1">🧭</span>
+                        <span class="font-cartoon text-xl font-bold">SEDERHANA</span>
+                        <span class="text-xs bg-orange-800/40 px-2.5 py-0.5 rounded-full mt-1">2D & 3D + Sifat • 20 Saat</span>
+                    </button>
+
+                    <!-- Tahap Mencabar -->
+                    <button onclick="startGame('mencabar')" class="btn-cartoon bg-gradient-to-b from-rose-500 to-purple-600 text-white rounded-2xl p-4 border-2 border-purple-800 flex flex-col items-center">
+                        <span class="text-3xl mb-1">🚀</span>
+                        <span class="font-cartoon text-xl font-bold">MENCABAR</span>
+                        <span class="text-xs bg-purple-900/40 px-2.5 py-0.5 rounded-full mt-1">Pakar Sisi/Bucu • 15 Saat</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Butang Nota Bentuk Ringkas -->
+            <div class="mt-5">
+                <button onclick="toggleGuideModal(true)" class="text-sky-700 hover:text-sky-900 font-bold text-sm underline decoration-2 underline-offset-4 flex items-center justify-center gap-1 mx-auto">
+                    <span>📖</span> Lihat Kamus Bentuk 2D & 3D Sebelum Mula
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== 2. SKRIN PERMAINAN AKTIF ==================== -->
+        <section id="gameScreen" class="hidden w-full flex flex-col gap-3 sm:gap-4">
+            
+            <!-- Papan Status (HUD): Soalan, Nyawa, Pemasa, Skor -->
+            <div class="cartoon-card rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2">
+                <!-- Nombor Soalan & Tahap -->
+                <div class="flex items-center gap-2">
+                    <span id="levelBadge" class="bg-indigo-100 text-indigo-800 font-cartoon font-bold text-xs sm:text-sm px-3 py-1 rounded-xl border border-indigo-300 uppercase">
+                        Mudah
+                    </span>
+                    <div class="bg-sky-100 text-sky-900 font-cartoon font-bold px-3 py-1 rounded-xl border border-sky-300 text-sm sm:text-base">
+                        Soalan <span id="questionCounter">1</span>/10
+                    </div>
+                </div>
+
+                <!-- Nyawa (3 Hati) -->
+                <div id="livesContainer" class="flex items-center gap-1 bg-rose-50 px-3 py-1 rounded-xl border border-rose-200" title="Nyawa Kamu">
+                    <!-- Ikon hati dijana oleh JS -->
+                </div>
+
+                <!-- Pemasa Undur -->
+                <div id="timerBox" class="flex items-center gap-1.5 bg-amber-100 text-amber-900 font-cartoon font-bold px-3.5 py-1 rounded-xl border-2 border-amber-400 text-sm sm:text-base">
+                    <span>⏱️</span>
+                    <span id="timerText">20s</span>
+                </div>
+
+                <!-- Skor -->
+                <div class="flex items-center gap-1.5 bg-emerald-100 text-emerald-900 font-cartoon font-bold px-3.5 py-1 rounded-xl border-2 border-emerald-400 text-sm sm:text-base">
+                    <span>⭐</span>
+                    <span id="scoreText">0</span>
+                </div>
+            </div>
+
+            <!-- Bar Kemajuan Soalan -->
+            <div class="w-full bg-white/70 h-3 rounded-full overflow-hidden border-2 border-white shadow-inner">
+                <div id="progressBar" class="bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-500 h-full transition-all duration-500 rounded-full" style="width: 10%;"></div>
+            </div>
+
+            <!-- Kad Utama Soalan -->
+            <div id="questionCard" class="cartoon-card rounded-3xl p-4 sm:p-6 flex flex-col items-center">
+                
+                <!-- Kategori Soalan -->
+                <span id="questionCategoryBadge" class="bg-purple-100 text-purple-800 border border-purple-300 font-bold text-xs sm:text-sm px-3 py-0.5 rounded-full mb-2">
+                    Kenali Bentuk
+                </span>
+
+                <!-- Teks Soalan -->
+                <h2 id="questionText" class="font-cartoon text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 text-center mb-4 leading-snug">
+                    Apakah nama bentuk geometri ini?
+                </h2>
+
+                <!-- Paparan Visual Bentuk Geometri Kartun -->
+                <div id="shapeStage" class="w-full max-w-xs sm:max-w-sm h-44 sm:h-52 bg-gradient-to-b from-sky-50 to-indigo-50 rounded-3xl border-4 border-dashed border-sky-300 flex items-center justify-center p-3 mb-5 relative overflow-hidden">
+                    <!-- SVG Bentuk Kartun dipaparkan di sini -->
+                    <div id="shapeVisualContainer" class="w-36 h-36 sm:w-44 sm:h-44 animate-shape-bob flex items-center justify-center"></div>
+                    
+                    <!-- Maskot Mini di Sudut yang Memberi Reaksi -->
+                    <div id="miniMascot" class="absolute bottom-2 right-2 text-2xl sm:text-3xl bg-white/90 rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center shadow border-2 border-sky-200 transition-transform duration-300">
+                        🤖
+                    </div>
+                </div>
+
+                <!-- 3 Pilihan Jawapan Interaktif -->
+                <div id="optionsContainer" class="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <!-- Butang jawapan A, B, C dijana oleh JS -->
+                </div>
+
+                <!-- Kotak Penerangan Ringkas Selepas Menjawab -->
+                <div id="feedbackPanel" class="hidden w-full mt-5 rounded-2xl p-4 border-2 animate-pop-in">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div class="flex items-start gap-3 text-left">
+                            <span id="feedbackEmoji" class="text-3xl sm:text-4xl mt-0.5">🎉</span>
+                            <div>
+                                <h3 id="feedbackTitle" class="font-cartoon font-bold text-lg sm:text-xl">
+                                    Hebat! Jawapan Betul!
+                                </h3>
+                                <p id="feedbackExplanation" class="text-sm sm:text-base font-semibold mt-0.5">
+                                    Segi tiga mempunyai 3 sisi lurus dan 3 bucu.
+                                </p>
+                            </div>
+                        </div>
+                        <button id="nextQuestionBtn" onclick="nextQuestion()" class="btn-cartoon w-full sm:w-auto shrink-0 bg-sky-500 hover:bg-sky-400 text-white font-cartoon font-bold px-6 py-3 rounded-2xl border-2 border-sky-700 text-base sm:text-lg flex items-center justify-center gap-2">
+                            <span>Seterusnya</span> <span>➡️</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ==================== 3. SKRIN KEPUTUSAN AKHIR & GANJARAN ==================== -->
+        <section id="resultScreen" class="hidden w-full cartoon-card rounded-3xl p-5 sm:p-8 text-center animate-pop-in">
+            <div id="trophyBadgeContainer" class="w-28 h-28 sm:w-36 sm:h-36 mx-auto mb-3 animate-shape-bob">
+                <!-- SVG Piala / Pingat Ganjaran -->
+            </div>
+
+            <span id="rewardRankBadge" class="inline-block bg-amber-100 text-amber-800 border-2 border-amber-400 font-cartoon font-bold text-sm sm:text-base px-4 py-1 rounded-full mb-2">
+                Piala Emas Penjelajah Geometri
+            </span>
+
+            <h2 id="resultHeadline" class="font-cartoon text-2xl sm:text-4xl font-extrabold text-slate-800 mb-2">
+                Tahniah, Penjelajah Hebat!
+            </h2>
+            <p id="resultSubtext" class="text-slate-600 font-semibold text-sm sm:text-base max-w-lg mx-auto mb-5">
+                Kamu telah berjaya menamatkan ekspedisi Dunia Geometri dengan cemerlang!
+            </p>
+
+            <!-- Statistik Pencapaian -->
+            <div class="grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto mb-6">
+                <div class="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-3">
+                    <div class="text-xs sm:text-sm font-bold text-emerald-700">Jumlah Skor</div>
+                    <div id="finalScoreDisplay" class="font-cartoon text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">0</div>
+                </div>
+                <div class="bg-sky-50 border-2 border-sky-300 rounded-2xl p-3">
+                    <div class="text-xs sm:text-sm font-bold text-sky-700">Jawapan Betul</div>
+                    <div id="finalCorrectDisplay" class="font-cartoon text-2xl sm:text-3xl font-extrabold text-sky-600 mt-1">0/10</div>
+                </div>
+                <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3">
+                    <div class="text-xs sm:text-sm font-bold text-amber-700">Baki Nyawa</div>
+                    <div id="finalLivesDisplay" class="font-cartoon text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">3 ❤️</div>
+                </div>
+            </div>
+
+            <!-- Butang Tindakan -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+                <button onclick="restartSameLevel()" class="btn-cartoon w-full sm:w-auto bg-gradient-to-b from-emerald-400 to-emerald-500 text-white font-cartoon font-bold px-7 py-3.5 rounded-2xl border-2 border-emerald-700 text-lg flex items-center justify-center gap-2">
+                    <span>🔄</span> Main Semula Tahap Ini
+                </button>
+                <button onclick="returnToMenu()" class="btn-cartoon w-full sm:w-auto bg-gradient-to-b from-sky-400 to-sky-500 text-white font-cartoon font-bold px-7 py-3.5 rounded-2xl border-2 border-sky-700 text-lg flex items-center justify-center gap-2">
+                    <span>🗺️</span> Tukar Tahap Lain
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL KAMUS BENTUK 2D & 3D -->
+    <div id="guideModal" class="hidden fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-white rounded-3xl border-4 border-sky-400 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl animate-pop-in">
+            <div class="p-4 sm:p-5 border-b-2 border-slate-100 flex items-center justify-between bg-sky-50 rounded-t-3xl">
+                <h3 class="font-cartoon text-xl sm:text-2xl font-bold text-sky-900 flex items-center gap-2">
+                    <span>📖</span> Kamus Bentuk Geometri 2D & 3D
+                </h3>
+                <button onclick="toggleGuideModal(false)" class="btn-cartoon bg-rose-500 text-white font-bold w-9 h-9 rounded-xl border-2 border-rose-700 flex items-center justify-center">
+                    ✕
+                </button>
+            </div>
+            <div id="guideGrid" class="p-4 sm:p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <!-- Kad info setiap bentuk dijana oleh JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PENGESAHAN KELUAR KE MENU -->
+    <div id="confirmExitModal" class="hidden fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border-4 border-amber-400 max-w-sm w-full p-6 text-center shadow-2xl animate-pop-in">
+            <div class="text-5xl mb-2">🤔</div>
+            <h3 class="font-cartoon text-xl font-bold text-slate-800 mb-2">Kembali ke Menu Utama?</h3>
+            <p class="text-slate-600 text-sm font-semibold mb-5">Kemajuan pengembaraan semasa akan ditetapkan semula.</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeConfirmModal()" class="btn-cartoon flex-1 bg-slate-200 text-slate-800 font-cartoon font-bold py-2.5 rounded-xl border-2 border-slate-400">
+                    Batal
+                </button>
+                <button onclick="confirmExitAction()" class="btn-cartoon flex-1 bg-rose-500 text-white font-cartoon font-bold py-2.5 rounded-xl border-2 border-rose-700">
+                    Ya, Keluar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================================================
+           1. PANGKALAN DATA BENTUK GEOMETRI 2D & 3D DENGAN ILUSTRASI SVG KARTUN COMEL
+           ========================================================================= */
+        const SHAPES_DATA = {
+            segi_tiga: {
+                id: 'segi_tiga',
+                name: 'Segi Tiga',
+                dimension: '2D',
+                sides: 3,
+                vertices: 3,
+                flatFaces: 1,
+                curvedFaces: 0,
+                desc: 'Bentuk 2D yang mempunyai 3 sisi lurus dan 3 bucu tajam.',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <polygon points="80,18 144,136 16,136" fill="#fbbf24" stroke="#d97706" stroke-width="6" stroke-linejoin="round"/>
+                        <g class="cartoon-eye">
+                            <circle cx="67" cy="92" r="7" fill="#1e293b"/><circle cx="69" cy="90" r="2.5" fill="#fff"/>
+                            <circle cx="93" cy="92" r="7" fill="#1e293b"/><circle cx="95" cy="90" r="2.5" fill="#fff"/>
+                        </g>
+                        <ellipse cx="56" cy="103" rx="6" ry="3.5" fill="#f43f5e" opacity="0.6"/>
+                        <ellipse cx="104" cy="103" rx="6" ry="3.5" fill="#f43f5e" opacity="0.6"/>
+                        <path d="M72,106 Q80,115 88,106" fill="none" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+                    </svg>`
+            },
+            segi_empat_sama: {
+                id: 'segi_empat_sama',
+                name: 'Segi Empat Sama',
+                dimension: '2D',
+                sides: 4,
+                vertices: 4,
+                flatFaces: 1,
+                curvedFaces: 0,
+                desc: 'Bentuk 2D yang mempunyai 4 sisi lurus yang sama panjang dan 4 bucu.',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <rect x="26" y="26" width="108" height="108" rx="12" fill="#38bdf8" stroke="#0284c7" stroke-width="6"/>
+                        <g class="cartoon-eye">
+                            <circle cx="62" cy="74" r="8" fill="#1e293b"/><circle cx="64" cy="71" r="3" fill="#fff"/>
+                            <circle cx="98" cy="74" r="8" fill="#1e293b"/><circle cx="100" cy="71" r="3" fill="#fff"/>
+                        </g>
+                        <ellipse cx="50" cy="87" rx="7" ry="4" fill="#fb7185" opacity="0.7"/>
+                        <ellipse cx="110" cy="87" rx="7" ry="4" fill="#fb7185" opacity="0.7"/>
+                        <path d="M70,90 Q80,101 90,90" fill="none" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+                    </svg>`
+            },
+            segi_empat_tepat: {
+                id: 'segi_empat_tepat',
+                name: 'Segi Empat Tepat',
+                dimension: '2D',
+                sides: 4,
+                vertices: 4,
+                flatFaces: 1,
+                curvedFaces: 0,
+                desc: 'Bentuk 2D dengan 4 bucu dan 4 sisi lurus (sisi bertentangan sama panjang).',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <rect x="14" y="42" width="132" height="76" rx="12" fill="#4ade80" stroke="#16a34a" stroke-width="6"/>
+                        <g class="cartoon-eye">
+                            <circle cx="60" cy="74" r="8" fill="#1e293b"/><circle cx="62" cy="71" r="3" fill="#fff"/>
+                            <circle cx="100" cy="74" r="8" fill="#1e293b"/><circle cx="102" cy="71" r="3" fill="#fff"/>
+                        </g>
+                        <ellipse cx="47" cy="87" rx="7" ry="4" fill="#f43f5e" opacity="0.6"/>
+                        <ellipse cx="113" cy="87" rx="7" ry="4" fill="#f43f5e" opacity="0.6"/>
+                        <path d="M70,88 Q80,99 90,88" fill="none" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+                    </svg>`
+            },
+            bulatan: {
+                id: 'bulatan',
+                name: 'Bulatan',
+                dimension: '2D',
+                sides: 1, // 1 sisi melengkung
+                vertices: 0,
+                flatFaces: 1,
+                curvedFaces: 0,
+                desc: 'Bentuk 2D yang bulat sempurna, mempunyai 1 sisi melengkung dan 0 bucu.',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <circle cx="80" cy="80" r="58" fill="#f472b6" stroke="#db2777" stroke-width="6"/>
+                        <g class="cartoon-eye">
+                            <circle cx="62" cy="72" r="8" fill="#1e293b"/><circle cx="64" cy="69" r="3" fill="#fff"/>
+                            <circle cx="98" cy="72" r="8" fill="#1e293b"/><circle cx="100" cy="69" r="3" fill="#fff"/>
+                        </g>
+                        <ellipse cx="50" cy="86" rx="7" ry="4" fill="#be185d" opacity="0.4"/>
+                        <ellipse cx="110" cy="86" rx="7" ry="4" fill="#be185d" opacity="0.4"/>
+                        <path d="M68,88 Q80,102 92,88 Z" fill="#be185d"/>
+                    </svg>`
+            },
+            kubus: {
+                id: 'kubus',
+                name: 'Kubus',
+                dimension: '3D',
+                edges: 12,
+                vertices: 8,
+                flatFaces: 6,
+                curvedFaces: 0,
+                desc: 'Bentuk 3D seperti dadu! Mempunyai 6 permukaan rata segi empat sama, 12 sisi lurus, dan 8 bucu.',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <!-- Atas -->
+                        <polygon points="80,18 136,44 80,70 24,44" fill="#93c5fd" stroke="#1d4ed8" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Kiri -->
+                        <polygon points="24,44 80,70 80,138 24,112" fill="#60a5fa" stroke="#1d4ed8" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Kanan -->
+                        <polygon points="80,70 136,44 136,112 80,138" fill="#3b82f6" stroke="#1d4ed8" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Muka Comel di Bahagian Atas/Depan -->
+                        <g class="cartoon-eye">
+                            <circle cx="44" cy="84" r="5.5" fill="#1e293b"/><circle cx="45.5" cy="82.5" r="2" fill="#fff"/>
+                            <circle cx="66" cy="94" r="5.5" fill="#1e293b"/><circle cx="67.5" cy="92.5" r="2" fill="#fff"/>
+                        </g>
+                        <path d="M48,100 Q55,109 62,105" fill="none" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
+                    </svg>`
+            },
+            kuboid: {
+                id: 'kuboid',
+                name: 'Kuboid',
+                dimension: '3D',
+                edges: 12,
+                vertices: 8,
+                flatFaces: 6,
+                curvedFaces: 0,
+                desc: 'Bentuk 3D seperti kotak pensel atau bata. Mempunyai 6 permukaan rata, 12 sisi, dan 8 bucu.',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <!-- Atas -->
+                        <polygon points="62,28 144,48 98,74 16,54" fill="#fde047" stroke="#ca8a04" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Kiri Depan -->
+                        <polygon points="16,54 98,74 98,132 16,112" fill="#facc15" stroke="#ca8a04" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Kanan Sisi -->
+                        <polygon points="98,74 144,48 144,106 98,132" fill="#eab308" stroke="#ca8a04" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Mata & Senyum -->
+                        <g class="cartoon-eye">
+                            <circle cx="42" cy="84" r="6" fill="#1e293b"/><circle cx="43.5" cy="82" r="2" fill="#fff"/>
+                            <circle cx="72" cy="91" r="6" fill="#1e293b"/><circle cx="73.5" cy="89" r="2" fill="#fff"/>
+                        </g>
+                        <path d="M50,101 Q58,110 66,105" fill="none" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
+                    </svg>`
+            },
+            silinder: {
+                id: 'silinder',
+                name: 'Silinder',
+                dimension: '3D',
+                edges: 2,
+                vertices: 0,
+                flatFaces: 2,
+                curvedFaces: 1,
+                desc: 'Bentuk 3D seperti tin minuman. Mempunyai 2 permukaan rata berbentuk bulatan, 1 permukaan melengkung, dan 0 bucu.',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <!-- Badan -->
+                        <path d="M36,42 L36,122 A44,18 0 0,0 124,122 L124,42 Z" fill="#a78bfa" stroke="#6d28d9" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Atas -->
+                        <ellipse cx="80" cy="42" rx="44" ry="18" fill="#c4b5fd" stroke="#6d28d9" stroke-width="4"/>
+                        <!-- Muka Comel -->
+                        <g class="cartoon-eye">
+                            <circle cx="64" cy="84" r="7" fill="#1e293b"/><circle cx="66" cy="82" r="2.5" fill="#fff"/>
+                            <circle cx="96" cy="84" r="7" fill="#1e293b"/><circle cx="98" cy="82" r="2.5" fill="#fff"/>
+                        </g>
+                        <ellipse cx="52" cy="96" rx="6" ry="3.5" fill="#f43f5e" opacity="0.6"/>
+                        <ellipse cx="108" cy="96" rx="6" ry="3.5" fill="#f43f5e" opacity="0.6"/>
+                        <path d="M70,98 Q80,108 90,98" fill="none" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+                    </svg>`
+            },
+            kon: {
+                id: 'kon',
+                name: 'Kon',
+                dimension: '3D',
+                edges: 1,
+                vertices: 1,
+                flatFaces: 1,
+                curvedFaces: 1,
+                desc: 'Bentuk 3D seperti topi parti atau kon aiskrim. Mempunyai 1 permukaan rata, 1 permukaan melengkung, dan 1 bucu.',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <!-- Badan Kon -->
+                        <path d="M80,18 L30,124 A50,18 0 0,0 130,124 Z" fill="#fb923c" stroke="#c2410c" stroke-width="4" stroke-linejoin="round"/>
+                        <path d="M30,124 A50,18 0 0,0 130,124" fill="none" stroke="#c2410c" stroke-width="4"/>
+                        <!-- Muka Comel -->
+                        <g class="cartoon-eye">
+                            <circle cx="67" cy="92" r="6.5" fill="#1e293b"/><circle cx="69" cy="90" r="2.5" fill="#fff"/>
+                            <circle cx="93" cy="92" r="6.5" fill="#1e293b"/><circle cx="95" cy="90" r="2.5" fill="#fff"/>
+                        </g>
+                        <path d="M71,105 Q80,114 89,105" fill="none" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+                    </svg>`
+            },
+            piramid: {
+                id: 'piramid',
+                name: 'Piramid',
+                dimension: '3D',
+                edges: 8,
+                vertices: 5,
+                flatFaces: 5,
+                curvedFaces: 0,
+                desc: 'Piramid tapak segi empat mempunyai 5 permukaan rata, 8 sisi lurus, dan 5 bucu tajam di puncak serta tapak.',
+                svg: `
+                    <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow">
+                        <!-- Muka Depan Kiri -->
+                        <polygon points="80,20 22,122 86,140" fill="#34d399" stroke="#047857" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Muka Sisi Kanan -->
+                        <polygon points="80,20 86,140 138,112" fill="#10b981" stroke="#047857" stroke-width="4" stroke-linejoin="round"/>
+                        <!-- Muka Comel -->
+                        <g class="cartoon-eye">
+                            <circle cx="55" cy="94" r="5.5" fill="#1e293b"/><circle cx="56.5" cy="92.5" r="2" fill="#fff"/>
+                            <circle cx="76" cy="98" r="5.5" fill="#1e293b"/><circle cx="77.5" cy="96.5" r="2" fill="#fff"/>
+                        </g>
+                        <path d="M58,109 Q65,117 73,111" fill="none" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
+                    </svg>`
+            }
+        };
+
+        /* =========================================================================
+           2. ENJIN KESAN BUNYI WEB AUDIO API (TIADA FAIL AUDIO LUARAN)
+           ========================================================================= */
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type = 'sine', duration = 0.15, startTimeOffset = 0, vol = 0.18) {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime + startTimeOffset;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+
+                gain.gain.setValueAtTime(vol, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + duration);
+            }
+
+            click() {
+                this.playTone(520, 'triangle', 0.08, 0, 0.15);
+            }
+
+            correct() {
+                // Melodi ceria naik
+                this.playTone(523.25, 'sine', 0.14, 0, 0.2);      // C5
+                this.playTone(659.25, 'sine', 0.14, 0.1, 0.2);    // E5
+                this.playTone(783.99, 'sine', 0.25, 0.2, 0.22);   // G5
+            }
+
+            wrong() {
+                // Bunyi rendah lembut
+                this.playTone(260, 'sawtooth', 0.18, 0, 0.14);
+                this.playTone(195, 'sawtooth', 0.26, 0.14, 0.14);
+            }
+
+            tick() {
+                this.playTone(880, 'sine', 0.05, 0, 0.08);
+            }
+
+            victory() {
+                // Fanfare kemenangan
+                const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+                const times = [0, 0.12, 0.24, 0.36, 0.52, 0.66];
+                notes.forEach((n, idx) => {
+                    this.playTone(n, 'triangle', 0.25, times[idx], 0.22);
+                });
+            }
+        }
+
+        const sfx = new SoundEffects();
+
+        function toggleSound() {
+            sfx.muted = !sfx.muted;
+            const icon = document.getElementById('soundIcon');
+            const label = document.getElementById('soundLabel');
+            if (sfx.muted) {
+                icon.textContent = '🔇';
+                label.textContent = 'Bunyi: Senyap';
+            } else {
+                icon.textContent = '🔊';
+                label.textContent = 'Bunyi: Hidup';
+                sfx.click();
+            }
+        }
+
+        /* =========================================================================
+           3. PENJANA BANK SOALAN DINAMIK MENGIKUT TAHAP KESUKARAN
+           ========================================================================= */
+        function shuffleArray(arr) {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        function generateQuestionsForLevel(level) {
+            const allKeys = Object.keys(SHAPES_DATA);
+            const shapes2D = ['segi_tiga', 'segi_empat_sama', 'segi_empat_tepat', 'bulatan'];
+            const shapes3D = ['kubus', 'kuboid', 'silinder', 'kon', 'piramid'];
+            let pool = [];
+
+            // Fungsi bantu bina 3 pilihan jawapan unik
+            const makeOptions = (correctAnswer, distractorPool) => {
+                const filtered = shuffleArray(distractorPool.filter(item => item !== correctAnswer));
+                const chosen = [correctAnswer, filtered[0], filtered[1]];
+                return shuffleArray(chosen);
+            };
+
+            if (level === 'mudah') {
+                // Tahap Mudah: Padanan nama bentuk 2D & 3D asas + soalan sisi 2D mudah
+                allKeys.forEach(key => {
+                    const s = SHAPES_DATA[key];
+                    pool.push({
+                        category: `Kenali Bentuk ${s.dimension}`,
+                        question: 'Apakah nama bentuk geometri yang ceria ini?',
+                        shapeKey: key,
+                        options: makeOptions(s.name, allKeys.map(k => SHAPES_DATA[k].name)),
+                        answer: s.name,
+                        explanation: `Ini ialah ${s.name}. ${s.desc}`
+                    });
+                });
+
+                // Tambah soalan sifat asas 2D
+                shapes2D.forEach(key => {
+                    const s = SHAPES_DATA[key];
+                    if (key !== 'bulatan') {
+                        pool.push({
+                            category: 'Kira Bilangan Sisi',
+                            question: `Berapakah bilangan sisi lurus pada ${s.name}?`,
+                            shapeKey: key,
+                            options: makeOptions(`${s.sides} sisi`, ['2 sisi', '3 sisi', '4 sisi', '5 sisi', '6 sisi']),
+                            answer: `${s.sides} sisi`,
+                            explanation: `${s.name} mempunyai ${s.sides} sisi lurus dan ${s.vertices} bucu.`
+                        });
+                    } else {
+                        pool.push({
+                            category: 'Kira Bilangan Bucu',
+                            question: 'Berapakah bilangan bucu pada bentuk Bulatan?',
+                            shapeKey: 'bulatan',
+                            options: ['0 bucu', '1 bucu', '4 bucu'],
+                            answer: '0 bucu',
+                            explanation: 'Bulatan tidak mempunyai bucu tajam (0 bucu) kerana sisinya melengkung sepenuhnya.'
+                        });
+                    }
+                });
+
+            } else if (level === 'sederhana') {
+                // Tahap Sederhana: Campuran padanan bentuk 3D, dimensi 2D/3D, dan bilangan sisi/bucu/permukaan
+                allKeys.forEach(key => {
+                    const s = SHAPES_DATA[key];
+                    pool.push({
+                        category: `Pengecaman Bentuk ${s.dimension}`,
+                        question: `Namakan bentuk ${s.dimension} yang ditunjukkan di bawah:`,
+                        shapeKey: key,
+                        options: makeOptions(s.name, allKeys.map(k => SHAPES_DATA[k].name)),
+                        answer: s.name,
+                        explanation: `Jawapannya ialah ${s.name}. ${s.desc}`
+                    });
+                });
+
+                // Soalan sifat 2D & 3D
+                pool.push({
+                    category: 'Sifat Bentuk 3D',
+                    question: 'Berapakah bilangan permukaan rata pada bentuk Kubus?',
+                    shapeKey: 'kubus',
+                    options: ['6 permukaan rata', '4 permukaan rata', '8 permukaan rata'],
+                    answer: '6 permukaan rata',
+                    explanation: 'Kubus mempunyai 6 permukaan rata yang semuanya berbentuk segi empat sama.'
+                });
+
+                pool.push({
+                    category: 'Sifat Bentuk 3D',
+                    question: 'Berapakah bilangan bucu pada bentuk Kon?',
+                    shapeKey: 'kon',
+                    options: ['1 bucu', '2 bucu', '0 bucu'],
+                    answer: '1 bucu',
+                    explanation: 'Kon hanya mempunyai 1 bucu tajam di bahagian puncaknya.'
+                });
+
+                pool.push({
+                    category: 'Sifat Bentuk 3D',
+                    question: 'Berapakah bilangan permukaan rata berbentuk bulatan pada Silinder?',
+                    shapeKey: 'silinder',
+                    options: ['2 permukaan rata', '1 permukaan rata', '3 permukaan rata'],
+                    answer: '2 permukaan rata',
+                    explanation: 'Silinder mempunyai 2 permukaan rata (atas dan bawah) serta 1 permukaan melengkung.'
+                });
+
+                pool.push({
+                    category: 'Sifat Bentuk 3D',
+                    question: 'Berapakah bilangan bucu pada bentuk Piramid tapak segi empat ini?',
+                    shapeKey: 'piramid',
+                    options: ['5 bucu', '4 bucu', '6 bucu'],
+                    answer: '5 bucu',
+                    explanation: 'Piramid ini mempunyai 4 bucu di tapak dan 1 bucu di puncak, menjadikan semuanya 5 bucu.'
+                });
+
+                pool.push({
+                    category: 'Sifat Bentuk 2D',
+                    question: 'Bentuk manakah mempunyai 4 sisi yang sama panjang dan 4 bucu?',
+                    shapeKey: 'segi_empat_sama',
+                    options: ['Segi Empat Sama', 'Segi Tiga', 'Bulatan'],
+                    answer: 'Segi Empat Sama',
+                    explanation: 'Segi Empat Sama mempunyai keempat-empat sisi yang sama panjang.'
+                });
+
+            } else {
+                // Tahap Mencabar: Fokus sifat mendalam sisi (edges), bucu (vertices) & permukaan rata/melengkung 3D
+                const hardQuestions = [
+                    {
+                        category: 'Cabaran Sifat 3D',
+                        question: 'Berapakah bilangan sisi lurus (tepi) dan bucu pada Kubus?',
+                        shapeKey: 'kubus',
+                        options: ['12 sisi, 8 bucu', '8 sisi, 6 bucu', '6 sisi, 12 bucu'],
+                        answer: '12 sisi, 8 bucu',
+                        explanation: 'Kubus mempunyai 12 sisi lurus, 8 bucu, dan 6 permukaan rata.'
+                    },
+                    {
+                        category: 'Cabaran Sifat 3D',
+                        question: 'Berapakah jumlah permukaan rata yang terdapat pada Kuboid?',
+                        shapeKey: 'kuboid',
+                        options: ['6 permukaan rata', '4 permukaan rata', '8 permukaan rata'],
+                        answer: '6 permukaan rata',
+                        explanation: 'Sama seperti kubus, kuboid mempunyai 6 permukaan rata, 12 sisi, dan 8 bucu.'
+                    },
+                    {
+                        category: 'Cabaran Permukaan 3D',
+                        question: 'Apakah jenis permukaan yang dimiliki oleh bentuk Silinder?',
+                        shapeKey: 'silinder',
+                        options: ['2 rata, 1 melengkung', '1 rata, 2 melengkung', '3 rata, 0 melengkung'],
+                        answer: '2 rata, 1 melengkung',
+                        explanation: 'Silinder mempunyai 2 permukaan rata (atas & bawah) dan 1 permukaan melengkung di tengah.'
+                    },
+                    {
+                        category: 'Cabaran Permukaan 3D',
+                        question: 'Berapakah bilangan permukaan rata dan melengkung pada Kon?',
+                        shapeKey: 'kon',
+                        options: ['1 rata, 1 melengkung', '2 rata, 1 melengkung', '0 rata, 2 melengkung'],
+                        answer: '1 rata, 1 melengkung',
+                        explanation: 'Kon mempunyai 1 tapak rata berbentuk bulatan dan 1 permukaan melengkung.'
+                    },
+                    {
+                        category: 'Cabaran Sifat 3D',
+                        question: 'Berapakah bilangan sisi lurus pada Piramid tapak segi empat?',
+                        shapeKey: 'piramid',
+                        options: ['8 sisi lurus', '6 sisi lurus', '10 sisi lurus'],
+                        answer: '8 sisi lurus',
+                        explanation: 'Piramid tapak segi empat mempunyai 4 sisi di tapak dan 4 sisi condong ke puncak (jumlah 8 sisi).'
+                    },
+                    {
+                        category: 'Cabaran Permukaan 3D',
+                        question: 'Berapakah jumlah keseluruhan permukaan rata pada Piramid ini?',
+                        shapeKey: 'piramid',
+                        options: ['5 permukaan rata', '4 permukaan rata', '6 permukaan rata'],
+                        answer: '5 permukaan rata',
+                        explanation: 'Piramid mempunyai 1 tapak segi empat dan 4 permukaan segi tiga, iaitu 5 permukaan rata.'
+                    },
+                    {
+                        category: 'Cabaran Bucu 3D',
+                        question: 'Antara bentuk 3D berikut, bentuk ini mempunyai 0 bucu. Namakannya!',
+                        shapeKey: 'silinder',
+                        options: ['Silinder', 'Kon', 'Piramid'],
+                        answer: 'Silinder',
+                        explanation: 'Silinder tidak mempunyai sebarang bucu tajam (0 bucu).'
+                    },
+                    {
+                        category: 'Cabaran Sifat 3D',
+                        question: 'Kuboid mempunyai 8 bucu. Berapakah pula bilangan sisinya?',
+                        shapeKey: 'kuboid',
+                        options: ['12 sisi', '10 sisi', '8 sisi'],
+                        answer: '12 sisi',
+                        explanation: 'Kuboid mempunyai 12 sisi lurus, 8 bucu, dan 6 permukaan rata.'
+                    },
+                    {
+                        category: 'Perbandingan 2D',
+                        question: 'Segi Empat Tepat mempunyai 4 sisi. Bagaimanakah panjang sisinya?',
+                        shapeKey: 'segi_empat_tepat',
+                        options: ['Sisi bertentangan sama panjang', 'Semua 4 sisi sama panjang', 'Semua sisi melengkung'],
+                        answer: 'Sisi bertentangan sama panjang',
+                        explanation: 'Segi Empat Tepat mempunyai 2 pasang sisi bertentangan yang sama panjang.'
+                    },
+                    {
+                        category: 'Cabaran Bentuk 2D',
+                        question: 'Berapakah bilangan bucu dan sisi melengkung pada Bulatan?',
+                        shapeKey: 'bulatan',
+                        options: ['0 bucu, 1 sisi melengkung', '1 bucu, 1 sisi melengkung', '0 bucu, 0 sisi'],
+                        answer: '0 bucu, 1 sisi melengkung',
+                        explanation: 'Bulatan mempunyai 1 sisi melengkung yang berterusan dan 0 bucu.'
+                    },
+                    {
+                        category: 'Kenali Bentuk 3D',
+                        question: 'Bentuk ini mempunyai 1 bucu dan 1 permukaan rata. Apakah namanya?',
+                        shapeKey: 'kon',
+                        options: ['Kon', 'Silinder', 'Kubus'],
+                        answer: 'Kon',
+                        explanation: 'Kon ialah satu-satunya bentuk 3D di sini yang mempunyai 1 bucu dan 1 permukaan rata.'
+                    },
+                    {
+                        category: 'Kenali Bentuk 2D',
+                        question: 'Bentuk 2D ini mempunyai 3 bucu dan jumlah sudutnya 180 darjah. Namakannya!',
+                        shapeKey: 'segi_tiga',
+                        options: ['Segi Tiga', 'Segi Empat Sama', 'Segi Empat Tepat'],
+                        answer: 'Segi Tiga',
+                        explanation: 'Segi Tiga mempunyai 3 sisi lurus dan 3 bucu.'
+                    }
+                ];
+                pool = hardQuestions;
+            }
+
+            // Pilih 10 soalan secara rawak tanpa berulang
+            return shuffleArray(pool).slice(0, 10);
+        }
+
+        /* =========================================================================
+           4. KEADAAN PERMAINAN (GAME STATE) & LOGIK UTAMA
+           ========================================================================= */
+        const LEVEL_CONFIG = {
+            mudah: { label: 'Mudah', timePerQuestion: 25, pointsPerCorrect: 10 },
+            sederhana: { label: 'Sederhana', timePerQuestion: 20, pointsPerCorrect: 15 },
+            mencabar: { label: 'Mencabar', timePerQuestion: 15, pointsPerCorrect: 20 }
+        };
+
+        let gameState = {
+            level: 'mudah',
+            questions: [],
+            currentIndex: 0,
+            score: 0,
+            correctCount: 0,
+            lives: 3,
+            timeLeft: 20,
+            timerInterval: null,
+            answered: false
+        };
+
+        // Inisialisasi paparan awal semasa halaman dimuatkan
+        window.onload = function() {
+            renderStartPreviewShapes();
+            renderGuideDictionary();
+        };
+
+        function renderStartPreviewShapes() {
+            const bar = document.getElementById('previewShapesBar');
+            const sampleKeys = ['segi_tiga', 'segi_empat_sama', 'bulatan', 'kubus', 'silinder', 'kon', 'piramid'];
+            bar.innerHTML = sampleKeys.map((k, idx) => `
+                <div class="w-12 h-12 sm:w-14 sm:h-14 animate-shape-bob" style="animation-delay: ${idx * 0.25}s;" title="${SHAPES_DATA[k].name}">
+                    ${SHAPES_DATA[k].svg}
+                </div>
+            `).join('');
+        }
+
+        function renderGuideDictionary() {
+            const grid = document.getElementById('guideGrid');
+            grid.innerHTML = Object.values(SHAPES_DATA).map(s => `
+                <div class="bg-sky-50/80 border-2 border-sky-200 rounded-2xl p-3 flex flex-col items-center text-center">
+                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full mb-1 ${s.dimension === '2D' ? 'bg-amber-200 text-amber-900' : 'bg-purple-200 text-purple-900'}">
+                        Bentuk ${s.dimension}
+                    </span>
+                    <div class="w-20 h-20 my-1">${s.svg}</div>
+                    <h4 class="font-cartoon font-bold text-slate-800 text-base">${s.name}</h4>
+                    <p class="text-xs text-slate-600 font-semibold mt-1">${s.desc}</p>
+                </div>
+            `).join('');
+        }
+
+        function toggleGuideModal(show) {
+            sfx.click();
+            const modal = document.getElementById('guideModal');
+            modal.classList.toggle('hidden', !show);
+        }
+
+        function startGame(level) {
+            sfx.click();
+            stopConfetti();
+
+            const cfg = LEVEL_CONFIG[level];
+            gameState = {
+                level: level,
+                questions: generateQuestionsForLevel(level),
+                currentIndex: 0,
+                score: 0,
+                correctCount: 0,
+                lives: 3,
+                timeLeft: cfg.timePerQuestion,
+                timerInterval: null,
+                answered: false
+            };
+
+            // Tukar paparan skrin
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('homeBtn').classList.remove('hidden');
+
+            document.getElementById('levelBadge').textContent = cfg.label;
+            updateHUD();
+            loadCurrentQuestion();
+        }
+
+        function updateHUD() {
+            document.getElementById('questionCounter').textContent = `${gameState.currentIndex + 1}`;
+            document.getElementById('scoreText').textContent = gameState.score;
+
+            // Kemas kini bar kemajuan
+            const pct = ((gameState.currentIndex + 1) / gameState.questions.length) * 100;
+            document.getElementById('progressBar').style.width = `${pct}%`;
+
+            // Kemas kini ikon nyawa (3 hati)
+            const livesDiv = document.getElementById('livesContainer');
+            let heartsHTML = '';
+            for (let i = 0; i < 3; i++) {
+                if (i < gameState.lives) {
+                    heartsHTML += `<span class="text-lg sm:text-xl heart-beat" style="animation-delay:${i*0.2}s">❤️</span>`;
+                } else {
+                    heartsHTML += `<span class="text-lg sm:text-xl opacity-30 grayscale">🖤</span>`;
+                }
+            }
+            livesDiv.innerHTML = heartsHTML;
+        }
+
+        function loadCurrentQuestion() {
+            clearInterval(gameState.timerInterval);
+            gameState.answered = false;
+
+            const q = gameState.questions[gameState.currentIndex];
+            const cfg = LEVEL_CONFIG[gameState.level];
+            gameState.timeLeft = cfg.timePerQuestion;
+
+            // Tetapkan semula UI kad soalan
+            const qCard = document.getElementById('questionCard');
+            qCard.classList.remove('animate-shake', 'animate-celebrate');
+            document.getElementById('feedbackPanel').classList.add('hidden');
+            document.getElementById('miniMascot').textContent = '🤖';
+            document.getElementById('miniMascot').style.transform = 'scale(1)';
+
+            // Isi teks dan visual bentuk
+            document.getElementById('questionCategoryBadge').textContent = q.category;
+            document.getElementById('questionText').textContent = q.question;
+            document.getElementById('shapeVisualContainer').innerHTML = SHAPES_DATA[q.shapeKey].svg;
+
+            // Bina 3 butang pilihan jawapan
+            const optionsContainer = document.getElementById('optionsContainer');
+            const letters = ['A', 'B', 'C'];
+            const btnColors = [
+                'from-sky-400 to-sky-500 border-sky-700',
+                'from-amber-400 to-amber-500 border-amber-700',
+                'from-pink-400 to-pink-500 border-pink-700'
+            ];
+
+            optionsContainer.innerHTML = q.options.map((opt, idx) => `
+                <button onclick="handleOptionSelect(this, '${opt.replace(/'/g, "\\'")}')"
+                    class="option-btn btn-cartoon bg-gradient-to-b ${btnColors[idx]} text-white font-cartoon font-bold py-3.5 px-4 rounded-2xl border-2 text-base sm:text-lg flex items-center justify-center gap-2.5 shadow-md">
+                    <span class="bg-white/25 w-8 h-8 rounded-xl flex items-center justify-center text-sm font-extrabold shrink-0">${letters[idx]}</span>
+                    <span>${opt}</span>
+                </button>
+            `).join('');
+
+            updateHUD();
+            startQuestionTimer();
+        }
+
+        function startQuestionTimer() {
+            const timerText = document.getElementById('timerText');
+            const timerBox = document.getElementById('timerBox');
+
+            const updateTimerVisual = () => {
+                timerText.textContent = `${gameState.timeLeft}s`;
+                if (gameState.timeLeft <= 5) {
+                    timerBox.classList.remove('bg-amber-100', 'text-amber-900', 'border-amber-400');
+                    timerBox.classList.add('bg-rose-500', 'text-white', 'border-rose-700', 'animate-pulse');
+                } else {
+                    timerBox.classList.add('bg-amber-100', 'text-amber-900', 'border-amber-400');
+                    timerBox.classList.remove('bg-rose-500', 'text-white', 'border-rose-700', 'animate-pulse');
+                }
+            };
+
+            updateTimerVisual();
+
+            gameState.timerInterval = setInterval(() => {
+                if (gameState.answered) {
+                    clearInterval(gameState.timerInterval);
+                    return;
+                }
+
+                gameState.timeLeft--;
+                updateTimerVisual();
+
+                if (gameState.timeLeft > 0 && gameState.timeLeft <= 5) {
+                    sfx.tick();
+                }
+
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.timerInterval);
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+
+        function handleOptionSelect(clickedBtn, selectedValue) {
+            if (gameState.answered) return;
+            gameState.answered = true;
+            clearInterval(gameState.timerInterval);
+
+            const q = gameState.questions[gameState.currentIndex];
+            const isCorrect = (selectedValue === q.answer);
+            const allBtns = document.querySelectorAll('.option-btn');
+
+            // Nyahaktifkan semua butang dan serlahkan jawapan betul/salah
+            allBtns.forEach(btn => {
+                btn.disabled = true;
+                const btnText = btn.querySelector('span:last-child').textContent;
+                if (btnText === q.answer) {
+                    btn.className = 'option-btn btn-cartoon bg-gradient-to-b from-emerald-500 to-emerald-600 border-emerald-800 text-white font-cartoon font-bold py-3.5 px-4 rounded-2xl border-2 text-base sm:text-lg flex items-center justify-center gap-2.5 ring-4 ring-emerald-300';
+                } else if (btn === clickedBtn && !isCorrect) {
+                    btn.className = 'option-btn btn-cartoon bg-gradient-to-b from-rose-500 to-rose-600 border-rose-800 text-white font-cartoon font-bold py-3.5 px-4 rounded-2xl border-2 text-base sm:text-lg flex items-center justify-center gap-2.5 opacity-95';
+                } else {
+                    btn.classList.add('opacity-50');
+                }
+            });
+
+            if (isCorrect) {
+                sfx.correct();
+                const cfg = LEVEL_CONFIG[gameState.level];
+                // Bonus masa pantas + mata asas
+                const timeBonus = Math.ceil(gameState.timeLeft / 5);
+                gameState.score += cfg.pointsPerCorrect + timeBonus;
+                gameState.correctCount++;
+
+                document.getElementById('questionCard').classList.add('animate-celebrate');
+                document.getElementById('miniMascot').textContent = '🥳';
+                document.getElementById('miniMascot').style.transform = 'scale(1.2) rotate(10deg)';
+
+                showFeedback(
+                    true,
+                    `Syabas! Jawapan Betul! (+${cfg.pointsPerCorrect + timeBonus} mata)`,
+                    q.explanation
+                );
+            } else {
+                sfx.wrong();
+                gameState.lives = Math.max(0, gameState.lives - 1);
+
+                document.getElementById('questionCard').classList.add('animate-shake');
+                document.getElementById('miniMascot').textContent = '😮';
+                document.getElementById('miniMascot').style.transform = 'scale(1.15) rotate(-8deg)';
+
+                showFeedback(
+                    false,
+                    `Alamak, Kurang Tepat! Jawapannya: ${q.answer}`,
+                    q.explanation
+                );
+            }
+
+            updateHUD();
+        }
+
+        function handleTimeOut() {
+            if (gameState.answered) return;
+            gameState.answered = true;
+            sfx.wrong();
+
+            const q = gameState.questions[gameState.currentIndex];
+            gameState.lives = Math.max(0, gameState.lives - 1);
+
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach(btn => {
+                btn.disabled = true;
+                const btnText = btn.querySelector('span:last-child').textContent;
+                if (btnText === q.answer) {
+                    btn.className = 'option-btn btn-cartoon bg-gradient-to-b from-emerald-500 to-emerald-600 border-emerald-800 text-white font-cartoon font-bold py-3.5 px-4 rounded-2xl border-2 text-base sm:text-lg flex items-center justify-center gap-2.5 ring-4 ring-emerald-300';
+                } else {
+                    btn.classList.add('opacity-50');
+                }
+            });
+
+            document.getElementById('questionCard').classList.add('animate-shake');
+            document.getElementById('miniMascot').textContent = '⏰';
+
+            showFeedback(
+                false,
+                `Masa Tamat! Jawapan yang betul ialah ${q.answer}.`,
+                q.explanation
+            );
+
+            updateHUD();
+        }
+
+        function showFeedback(isSuccess, title, explanation) {
+            const panel = document.getElementById('feedbackPanel');
+            const emoji = document.getElementById('feedbackEmoji');
+            const titleEl = document.getElementById('feedbackTitle');
+            const expEl = document.getElementById('feedbackExplanation');
+            const nextBtn = document.getElementById('nextQuestionBtn');
+
+            panel.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-400', 'text-emerald-950', 'bg-rose-50', 'border-rose-400', 'text-rose-950');
+
+            if (isSuccess) {
+                panel.classList.add('bg-emerald-50', 'border-emerald-400', 'text-emerald-950');
+                emoji.textContent = '🌟';
+            } else {
+                panel.classList.add('bg-rose-50', 'border-rose-400', 'text-rose-950');
+                emoji.textContent = '💡';
+            }
+
+            titleEl.textContent = title;
+            expEl.textContent = explanation;
+
+            // Jika nyawa habis atau sudah sampai soalan ke-10, ubah teks butang
+            if (gameState.lives <= 0 || gameState.currentIndex >= gameState.questions.length - 1) {
+                nextBtn.innerHTML = `<span>Lihat Keputusan</span> <span>🏆</span>`;
+            } else {
+                nextBtn.innerHTML = `<span>Seterusnya</span> <span>➡️</span>`;
+            }
+        }
+
+        function nextQuestion() {
+            sfx.click();
+            if (gameState.lives <= 0 || gameState.currentIndex >= gameState.questions.length - 1) {
+                finishGame();
+            } else {
+                gameState.currentIndex++;
+                loadCurrentQuestion();
+            }
+        }
+
+        /* =========================================================================
+           5. SKRIN KEPUTUSAN AKHIR, GANJARAN PIALA & KONFETI
+           ========================================================================= */
+        function finishGame() {
+            clearInterval(gameState.timerInterval);
+            sfx.victory();
+
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+
+            document.getElementById('finalScoreDisplay').textContent = gameState.score;
+            document.getElementById('finalCorrectDisplay').textContent = `${gameState.correctCount}/10`;
+            document.getElementById('finalLivesDisplay').textContent = `${gameState.lives} ❤️`;
+
+            const trophyContainer = document.getElementById('trophyBadgeContainer');
+            const rankBadge = document.getElementById('rewardRankBadge');
+            const headline = document.getElementById('resultHeadline');
+            const subtext = document.getElementById('resultSubtext');
+
+            if (gameState.correctCount >= 8) {
+                // Piala Emas
+                rankBadge.textContent = '🏆 Piala Emas Penjelajah Geometri';
+                rankBadge.className = 'inline-block bg-amber-100 text-amber-800 border-2 border-amber-400 font-cartoon font-bold text-sm sm:text-base px-4 py-1 rounded-full mb-2';
+                headline.textContent = 'Luar Biasa! Juara Geometri!';
+                subtext.textContent = 'Kamu menguasai bentuk 2D dan 3D dengan sangat cemerlang. Kapten Geo amat berbangga dengan kamu!';
+                trophyContainer.innerHTML = getTrophySVG('#facc15', '#ca8a04', '1');
+                launchConfetti();
+            } else if (gameState.correctCount >= 5) {
+                // Pingat Perak
+                rankBadge.textContent = '🥈 Pingat Perak Pengembara Pintar';
+                rankBadge.className = 'inline-block bg-slate-100 text-slate-800 border-2 border-slate-400 font-cartoon font-bold text-sm sm:text-base px-4 py-1 rounded-full mb-2';
+                headline.textContent = 'Syabas, Usaha Yang Hebat!';
+                subtext.textContent = 'Kamu sudah mengenali banyak bentuk geometri. Cuba lagi untuk meraih Piala Emas!';
+                trophyContainer.innerHTML = getTrophySVG('#e2e8f0', '#64748b', '2');
+                launchConfetti();
+            } else {
+                // Pingat Gangsa
+                rankBadge.textContent = '🥉 Pingat Gangsa Penjelajah Muda';
+                rankBadge.className = 'inline-block bg-orange-100 text-orange-800 border-2 border-orange-400 font-cartoon font-bold text-sm sm:text-base px-4 py-1 rounded-full mb-2';
+                headline.textContent = 'Bagus! Teruskan Berlatih!';
+                subtext.textContent = 'Setiap pengembara hebat bermula dengan langkah pertama. Semak Kamus Bentuk dan cuba lagi!';
+                trophyContainer.innerHTML = getTrophySVG('#fdba74', '#c2410c', '3');
+            }
+        }
+
+        function getTrophySVG(fillMain, strokeMain, rankNum) {
+            return `
+                <svg viewBox="0 0 160 160" class="w-full h-full drop-shadow-lg">
+                    <!-- Pemegang Piala -->
+                    <path d="M42,42 C16,42 16,84 46,84" fill="none" stroke="${strokeMain}" stroke-width="8" stroke-linecap="round"/>
+                    <path d="M118,42 C144,42 144,84 114,84" fill="none" stroke="${strokeMain}" stroke-width="8" stroke-linecap="round"/>
+                    <!-- Cawan Piala -->
+                    <path d="M40,26 L120,26 L112,84 C108,106 52,106 48,84 Z" fill="${fillMain}" stroke="${strokeMain}" stroke-width="5" stroke-linejoin="round"/>
+                    <!-- Batang & Tapak -->
+                    <rect x="72" y="100" width="16" height="24" fill="${fillMain}" stroke="${strokeMain}" stroke-width="4"/>
+                    <rect x="48" y="124" width="64" height="18" rx="6" fill="#475569" stroke="#1e293b" stroke-width="4"/>
+                    <!-- Bintang di Tengah Piala -->
+                    <polygon points="80,40 87,55 103,57 91,68 94,84 80,76 66,84 69,68 57,57 73,55" fill="#ffffff" opacity="0.9"/>
+                    <text x="80" y="69" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="bold" font-size="18" fill="${strokeMain}">${rankNum}</text>
+                </svg>
+            `;
+        }
+
+        function restartSameLevel() {
+            startGame(gameState.level);
+        }
+
+        function returnToMenu() {
+            sfx.click();
+            stopConfetti();
+            clearInterval(gameState.timerInterval);
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('homeBtn').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        function confirmReturnHome() {
+            sfx.click();
+            // Jika berada di skrin keputusan akhir, terus balik menu tanpa pengesahan
+            if (!document.getElementById('resultScreen').classList.contains('hidden')) {
+                returnToMenu();
+                return;
+            }
+            document.getElementById('confirmExitModal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            sfx.click();
+            document.getElementById('confirmExitModal').classList.add('hidden');
+        }
+
+        function confirmExitAction() {
+            document.getElementById('confirmExitModal').classList.add('hidden');
+            returnToMenu();
+        }
+
+        /* =========================================================================
+           6. ANIMASI KONFETI KANVAS RESPONSIF
+           ========================================================================= */
+        let confettiAnimId = null;
+        let confettiParticles = [];
+
+        function launchConfetti() {
+            const canvas = document.getElementById('confettiCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const colors = ['#f43f5e', '#38bdf8', '#facc15', '#4ade80', '#a855f7', '#fb923c'];
+            confettiParticles = Array.from({ length: 90 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height,
+                size: Math.random() * 9 + 5,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                speedY: Math.random() * 3 + 2,
+                speedX: Math.random() * 2 - 1,
+                angle: Math.random() * 360,
+                spin: Math.random() * 6 - 3
+            }));
+
+            function animateConfetti() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                confettiParticles.forEach(p => {
+                    p.y += p.speedY;
+                    p.x += p.speedX;
+                    p.angle += p.spin;
+
+                    if (p.y > canvas.height) {
+                        p.y = -15;
+                        p.x = Math.random() * canvas.width;
+                    }
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate((p.angle * Math.PI) / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+                    ctx.restore();
+                });
+
+                confettiAnimId = requestAnimationFrame(animateConfetti);
+            }
+
+            stopConfetti();
+            animateConfetti();
+        }
+
+        function stopConfetti() {
+            if (confettiAnimId) {
+                cancelAnimationFrame(confettiAnimId);
+                confettiAnimId = null;
+            }
+            const canvas = document.getElementById('confettiCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('confettiCanvas');
+            if (canvas && confettiAnimId) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        });
+    </script>
+</body>
+</html>
